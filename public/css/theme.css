@@ -1,0 +1,287 @@
+.sender-label {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  margin: 0 4px 5px;
+}
+
+.sent .sender-label {
+  text-align: right;
+}
+
+.bubble {
+  background: var(--bubble);
+}
+
+.settings-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: #17203366;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.settings-panel[hidden] {
+  display: none;
+}
+
+.settings-card {
+  width: min(440px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 20px 60px #17203330;
+}
+
+.settings-lede {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0 20px;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 17px 0;
+  border-top: 1px solid var(--line);
+}
+
+.setting-row > div:first-child {
+  flex: 1;
+}
+
+.setting-row strong,
+.setting-row span {
+  display: block;
+}
+
+.setting-row strong {
+  font-size: 12px;
+}
+
+.setting-row div span {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.theme-switch {
+  display: flex !important;
+  flex-wrap: wrap;
+  background: var(--soft);
+  border-radius: 9px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.theme-switch button {
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  border-radius: 7px;
+  padding: 7px 9px;
+}
+
+.theme-switch button.active {
+  background: var(--panel);
+  color: var(--blue);
+  box-shadow: 0 1px 4px #17203318;
+}
+
+.toggle {
+  width: 39px;
+  height: 22px;
+  border-radius: 20px;
+  background: #c8ced8;
+  padding: 3px;
+}
+
+.toggle i {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: .2s;
+}
+
+.toggle.active {
+  background: var(--blue);
+}
+
+.toggle.active i {
+  transform: translateX(17px);
+}
+
+.privacy-badge {
+  color: #28a971 !important;
+  background: #ddf8eb;
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 10px !important;
+}
+
+body.dark-purple {
+  --ink: #f3edff;
+  --muted: #b3a6c9;
+  --line: #392a54;
+  --panel: #140d20;
+  --soft: #241438;
+  --bubble: #261935;
+  --blue: #a875ff;
+  background: #09050f;
+}
+
+.dark-purple .app-shell {
+  box-shadow: 0 0 55px #6f3cff20;
+}
+
+.dark-purple .profile-mini,
+.dark-purple .search-box {
+  background: #1d112e;
+}
+
+.dark-purple .main-stage,
+.dark-purple .sidebar {
+  background: var(--panel);
+}
+
+.dark-purple .details-panel {
+  background: #10091a;
+}
+
+.dark-purple .settings-card {
+  background: var(--panel);
+}
+
+body.dark-white {
+  --ink: #f7f7f7;
+  --muted: #a6a6a6;
+  --line: #2b2b2b;
+  --panel: #0d0d0d;
+  --soft: #1a1a1a;
+  --bubble: #1f1f1f;
+  --blue: #f5f5f5;
+  background: #000;
+}
+
+.dark-white .app-shell {
+  box-shadow: 0 0 45px #ffffff12;
+}
+
+.dark-white .profile-mini,
+.dark-white .search-box {
+  background: #151515;
+}
+
+.dark-white .main-stage,
+.dark-white .sidebar {
+  background: var(--panel);
+}
+
+.dark-white .details-panel {
+  background: #080808;
+}
+
+.dark-white .settings-card {
+  background: var(--panel);
+}
+
+.dark-white .sent .bubble,
+.dark-white .send-button {
+  color: #080808;
+}
+
+.dark-white .nav-tab b,
+.dark-white .more-media,
+.dark-white .theme-switch button.active {
+  color: #080808;
+}
+
+.dark-white .privacy-badge {
+  background: #f5f5f5;
+  color: #080808 !important;
+}
+
+@media (max-width: 680px) {
+  body {
+    font-size: 16px;
+  }
+
+  .app-shell {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .main-stage {
+    min-height: 100svh;
+  }
+
+  .sidebar {
+    width: min(310px, 88vw);
+    padding: 22px 17px;
+  }
+
+  .topbar {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .conversation {
+    padding: 22px max(14px, 4vw) 18px;
+  }
+
+  .composer {
+    height: 70px;
+    margin: 0 max(14px, 4vw);
+    padding-bottom: env(safe-area-inset-bottom);
+    gap: 3px;
+  }
+
+  .composer input {
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .icon-button,
+  .send-button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .message-row > div:not(.message-avatar) {
+    max-width: 86%;
+  }
+
+  .bubble {
+    font-size: 14px;
+    padding: 12px 14px;
+  }
+
+  .message-row time {
+    font-size: 10px;
+  }
+
+  .sender-label {
+    font-size: 10px;
+  }
+
+  .details-panel {
+    position: fixed;
+    z-index: 4;
+    inset: 0 0 0 auto;
+    width: min(330px, 92vw);
+    overflow: auto;
+  }
+
+  .top-actions .icon-button:nth-child(1),
+  .top-actions .icon-button:nth-child(2) {
+    display: none !important;
+  }
+}
