@@ -1,23 +1,26 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('messenger');
-});
+    $contacts = User::whereKeyNot(auth()->id())->orderBy('name')->get();
+
+    return view('messenger', ['contacts' => $contacts]);
+})->middleware('auth');
 
 Route::get('/dashboard', function () {
-    return view('messenger');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    return redirect('/');
+})->middleware(['auth'])->name('dashboard');
 
 Route::get('/profile', function () {
     return view('profile');
-})->name('profile');
+})->middleware('auth')->name('profile');
 
 Route::get('/settings', function () {
     return view('settings');
-})->name('settings');
+})->middleware('auth')->name('settings');
 
 Route::middleware('auth')->group(function () {
     Route::get('/account', [ProfileController::class, 'edit'])->name('profile.edit');

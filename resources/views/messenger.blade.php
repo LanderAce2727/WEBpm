@@ -27,9 +27,9 @@
         </div>
 
         <a class="profile-mini" href="{{ route('profile') }}">
-          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80" alt="Priya Mehta">
+          <span class="avatar-initials" aria-hidden="true">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
           <span>
-            <strong>Priya Mehta</strong>
+            <strong>{{ auth()->user()->name }}</strong>
             <small><i class="status-dot"></i> Available</small>
           </span>
           <b aria-hidden="true">...</b>
@@ -42,45 +42,43 @@
         </label>
 
         <nav class="nav-tabs" aria-label="Main sections">
-          <a class="nav-tab active" href="{{ url('/') }}"><span>o</span> Chats <b>4</b></a>
+          <a class="nav-tab active" href="{{ url('/') }}"><span>o</span> Chats <b>{{ $contacts->count() }}</b></a>
           <a class="nav-tab" href="{{ route('profile') }}"><span>u</span> Profile</a>
           <a class="nav-tab" href="{{ route('settings') }}"><span>*</span> Settings</a>
         </nav>
 
         <div class="section-heading">
-          <span>Family circle</span>
-          <button class="text-button" id="new-chat">+ New chat</button>
+          <span>Registered users</span>
+          <a class="text-button" href="{{ route('register') }}">+ Invite</a>
         </div>
         <div class="chat-list" id="chat-list">
-          <button class="chat-item active" data-chat="Mum & Dad" data-status="Online now" data-avatar="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80">
-            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80" alt="Mum and Dad">
-            <span class="chat-presence"></span>
-            <span class="chat-copy"><strong>Mum & Dad</strong><small>Don't forget Sunday lunch</small></span><time>10:42</time>
-          </button>
-          <button class="chat-item" data-chat="Sofia" data-status="Online now" data-avatar="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=160&q=80">
-            <img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=160&q=80" alt="Sofia">
-            <span class="chat-presence"></span>
-            <span class="chat-copy"><strong>Sofia</strong><small>Sent a photo</small></span><time>Yesterday</time>
-          </button>
-          <button class="chat-item" data-chat="Leo" data-status="Away" data-avatar="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80">
-            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80" alt="Leo">
-            <span class="chat-copy"><strong>Leo</strong><small>That view is unreal</small></span><time>Tue</time>
-          </button>
-          <button class="chat-item" data-chat="Family plans" data-status="4 members" data-avatar="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=160&q=80">
-            <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=160&q=80" alt="Family plans">
-            <span class="chat-copy"><strong>Family plans</strong><small>Alex: I can bring dessert</small></span><time>Mon</time>
-          </button>
+          @forelse ($contacts as $contact)
+            <button class="chat-item @if ($loop->first) active @endif" data-chat="{{ $contact->name }}" data-status="Registered user" data-initial="{{ strtoupper(substr($contact->name, 0, 1)) }}">
+              <span class="avatar-initials" aria-hidden="true">{{ strtoupper(substr($contact->name, 0, 1)) }}</span>
+              <span class="chat-presence"></span>
+              <span class="chat-copy"><strong>{{ $contact->name }}</strong><small>{{ $contact->email }}</small></span><time>New</time>
+            </button>
+          @empty
+            <div class="empty-state">
+              <strong>No other users yet</strong>
+              <span>Ask a friend to register, then they will appear here.</span>
+            </div>
+          @endforelse
         </div>
 
-        <div class="sidebar-footer"><span class="secure-icon">#</span> End-to-end private</div>
+        <form class="sidebar-footer logout-form" method="POST" action="{{ route('logout') }}">
+          @csrf
+          <span><span class="secure-icon">#</span> Signed in as {{ auth()->user()->name }}</span>
+          <button class="text-button" type="submit">Log out</button>
+        </form>
       </aside>
 
       <main class="main-stage">
         <header class="topbar">
           <button class="icon-button menu-button" id="open-sidebar" aria-label="Open menu">=</button>
           <div class="active-title">
-            <img id="header-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80" alt="Mum and Dad">
-            <div><h2 id="chat-title">Mum & Dad</h2><span id="chat-status"><i class="status-dot"></i> Online now</span></div>
+            <span class="avatar-initials large" id="header-avatar" aria-hidden="true">{{ $contacts->first() ? strtoupper(substr($contacts->first()->name, 0, 1)) : 'PM' }}</span>
+            <div><h2 id="chat-title">{{ $contacts->first()->name ?? 'No users yet' }}</h2><span id="chat-status"><i class="status-dot"></i> {{ $contacts->first() ? 'Registered user' : 'Waiting for registrations' }}</span></div>
           </div>
           <div class="top-actions">
             <button class="icon-button" id="call-button" aria-label="Start voice call">C</button>
@@ -89,10 +87,14 @@
           </div>
         </header>
 
-        <section class="conversation" id="conversation" aria-label="Conversation with Mum and Dad">
-          <div class="conversation-intro"><div class="intro-avatar"><img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=160&q=80" alt="Mum and Dad"></div><h3>Mum & Dad</h3><p>Your private family space. Messages and media stay between you.</p></div>
-          <div class="date-divider"><span>Today</span></div>
-          <div class="typing" id="typing"><span></span><span></span><span></span> Mum is typing</div>
+        <section class="conversation" id="conversation" aria-label="Conversation">
+          <div class="conversation-intro">
+            <div class="intro-avatar"><span class="avatar-initials large" id="intro-avatar" aria-hidden="true">{{ $contacts->first() ? strtoupper(substr($contacts->first()->name, 0, 1)) : 'PM' }}</span></div>
+            <h3>{{ $contacts->first()->name ?? 'Invite someone to start' }}</h3>
+            <p>{{ $contacts->first() ? 'Start a test message with this registered user.' : 'When another person registers, they will appear in your chat list.' }}</p>
+          </div>
+          <div class="date-divider"><span>No messages yet</span></div>
+          <div class="typing" id="typing" hidden><span></span><span></span><span></span> typing</div>
         </section>
 
         <form class="composer" id="composer">
@@ -104,9 +106,9 @@
       </main>
 
       <aside class="details-panel" id="details-panel" aria-label="Conversation details">
-        <div class="details-head"><h2>Shared moments</h2><button class="icon-button" id="close-details" aria-label="Close details">x</button></div>
-        <div class="details-profile"><img id="details-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&q=80" alt="Mum and Dad"><h3 id="details-name">Mum & Dad</h3><span id="details-members">2 members - Private chat</span></div>
-        <div class="details-section"><div class="details-label"><span>Media, links & docs</span><strong>12</strong></div><div class="media-grid"><img src="https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=240&q=80" alt="Mountain view"><img src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=240&q=80" alt="Lunch"><img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=240&q=80" alt="Hiking trail"><button class="more-media">+9</button></div></div>
+        <div class="details-head"><h2>User details</h2><button class="icon-button" id="close-details" aria-label="Close details">x</button></div>
+        <div class="details-profile"><span class="avatar-initials xl" id="details-avatar" aria-hidden="true">{{ $contacts->first() ? strtoupper(substr($contacts->first()->name, 0, 1)) : 'PM' }}</span><h3 id="details-name">{{ $contacts->first()->name ?? 'No user selected' }}</h3><span id="details-members">{{ $contacts->first() ? 'Registered user' : 'Waiting for registrations' }}</span></div>
+        <div class="details-section"><div class="details-label"><span>Media, links & docs</span><strong>0</strong></div><div class="empty-state compact"><strong>No shared files yet</strong><span>New uploads will show here later.</span></div></div>
         <div class="details-section"><div class="details-label"><span>Conversation</span></div><button class="detail-action"><span>/</span> Search in conversation <b>&gt;</b></button><button class="detail-action"><span>z</span> Mute notifications <b>&gt;</b></button></div>
         <div class="details-section"><div class="details-label"><span>Privacy</span></div><div class="privacy-note"><span>#</span><p><strong>Private by design</strong><br>Only members of this conversation can see its messages and media.</p></div></div>
       </aside>
