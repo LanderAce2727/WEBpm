@@ -138,6 +138,43 @@ body.dark-purple {
   background: #09050f;
 }
 
+body.dark-default {
+  --ink: #edf2f7;
+  --muted: #96a3b6;
+  --line: #263243;
+  --panel: #111827;
+  --panel-soft: #182231;
+  --soft: #182231;
+  --bubble: #243244;
+  --blue: #62a8ff;
+  --green: #54d69a;
+  background: #0b1018;
+}
+
+.dark-default .app-shell {
+  box-shadow: 0 0 45px #00000044;
+}
+
+.dark-default .profile-mini,
+.dark-default .search-box,
+.dark-default .gallery-search,
+.dark-default .profile-form input {
+  background: #172131;
+}
+
+.dark-default .main-stage,
+.dark-default .sidebar {
+  background: var(--panel);
+}
+
+.dark-default .details-panel {
+  background: #0d1520;
+}
+
+.dark-default .settings-card {
+  background: var(--panel);
+}
+
 .dark-purple .app-shell {
   box-shadow: 0 0 55px #6f3cff20;
 }

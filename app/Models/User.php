@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -22,6 +23,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'profile_photo_path',
+        'cover_photo_path',
+        'status_message',
     ];
 
     /**
@@ -45,5 +49,15 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function profilePhotoUrl(): ?string
+    {
+        return $this->profile_photo_path ? Storage::url($this->profile_photo_path) : null;
+    }
+
+    public function coverPhotoUrl(): ?string
+    {
+        return $this->cover_photo_path ? Storage::url($this->cover_photo_path) : null;
     }
 }
