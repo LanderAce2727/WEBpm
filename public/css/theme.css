@@ -128,13 +128,15 @@
 }
 
 body.dark-purple {
-  --ink: #f3edff;
-  --muted: #b3a6c9;
-  --line: #392a54;
-  --panel: #140d20;
-  --soft: #241438;
-  --bubble: #261935;
-  --blue: #a875ff;
+  --ink: #e8d9ff;
+  --muted: #b9a8d4;
+  --line: #3b2a56;
+  --panel: #130b1f;
+  --panel-soft: #1d102d;
+  --soft: #25153a;
+  --bubble: #28183d;
+  --blue: #b47cff;
+  --green: #64e6c3;
   background: #09050f;
 }
 
@@ -195,6 +197,76 @@ body.dark-default {
 
 .dark-purple .settings-card {
   background: var(--panel);
+}
+
+.dark-purple .page-shell,
+.dark-purple .profile-hero,
+.dark-purple .profile-cover-wrap,
+.dark-purple .info-panel,
+.dark-purple .profile-list div,
+.dark-purple .circle-row,
+.dark-purple .profile-form input,
+.dark-purple .back-link,
+.dark-purple .pill-link {
+  border-color: #3b2a56;
+  background: #1d102d;
+}
+
+.dark-purple .page-main {
+  background: #0d0716;
+}
+
+.dark-purple .profile-cover-wrap {
+  background: linear-gradient(135deg, #170d26, #2a1644 56%, #11352f);
+}
+
+.dark-purple .profile-identity {
+  color: #f0d77a;
+  text-shadow: 0 2px 14px #09050f;
+}
+
+.dark-purple .profile-identity span,
+.dark-purple .settings-header p {
+  color: #b8e8d9;
+}
+
+.dark-purple .profile-page .avatar-initials {
+  color: #120a1e;
+  background: linear-gradient(135deg, #b47cff, #64e6c3);
+}
+
+.dark-purple .profile-identity img,
+.dark-purple .profile-photo-frame .avatar-initials.xl {
+  border-color: #64e6c3;
+  box-shadow: 0 16px 42px #64e6c326;
+}
+
+.dark-purple .photo-edit-button,
+.dark-purple .photo-camera-button {
+  color: #120a1e;
+  background: #f0d77a;
+  box-shadow: 0 10px 28px #f0d77a24;
+}
+
+.dark-purple .photo-edit-button:hover,
+.dark-purple .photo-camera-button:hover {
+  color: #09050f;
+  background: #64e6c3;
+}
+
+.dark-purple .photo-camera-button {
+  border-color: #130b1f;
+}
+
+.dark-purple .photo-camera-button span::after {
+  border-color: #f0d77a;
+}
+
+.dark-purple .profile-save,
+.dark-purple .nav-tab b,
+.dark-purple .theme-switch button.active {
+  color: #120a1e;
+  background: #64e6c3;
 }
 
 body.dark-white {

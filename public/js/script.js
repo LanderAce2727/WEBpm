@@ -9,6 +9,9 @@ const detailsName = document.querySelector('#details-name');
 const detailsPanel = document.querySelector('#details-panel');
 const conversation = document.querySelector('#conversation');
 const input = document.querySelector('#message-input');
+const composer = document.querySelector('#composer');
+const sendButton = composer?.querySelector('.send-button');
+const friendshipGate = document.querySelector('#friendship-gate');
 const toast = document.querySelector('#toast');
 const sidebar = document.querySelector('.sidebar');
 const settingsPanel = document.querySelector('#settings-panel');
@@ -20,9 +23,10 @@ const galleryEmpty = document.querySelector('#gallery-empty');
 const galleryCount = document.querySelector('#gallery-count');
 const gallerySearch = document.querySelector('#gallery-search');
 const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-let activeChat = document.querySelector('.chat-item.active');
+let activeChat = null;
 let selectedMedia = null;
 let latestUnreadTotal = 0;
+let latestInviteTotal = 0;
 let notificationReady = false;
 let lastTypingPing = 0;
 let isSyncingMessages = false;
@@ -52,6 +56,75 @@ function setDetailsOpen(open) {
   detailsPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
   detailsButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
   document.body.classList.toggle('details-open', open);
+}
+
+function canMessage(item) {
+  return item?.dataset.canMessage === 'yes';
+}
+
+function setComposerEnabled(enabled) {
+  if (!input || !sendButton) return;
+
+  input.disabled = !enabled;
+  sendButton.disabled = !enabled;
+  input.placeholder = enabled ? 'Write a message...' : (activeChat ? 'Accept the invite before messaging' : 'Choose a conversation first');
+}
+
+function clearMessages(text = 'No messages yet') {
+  const typing = document.querySelector('#typing');
+  document.querySelectorAll('.message-row').forEach((message) => message.remove());
+  if (typing) typing.hidden = true;
+  const divider = document.querySelector('.date-divider span');
+  if (divider) divider.textContent = text;
+}
+
+function setChatFriendship(item, statusValue, direction) {
+  item.dataset.friendshipStatus = statusValue;
+  item.dataset.friendshipDirection = direction;
+  item.dataset.canMessage = statusValue === 'accepted' ? 'yes' : 'no';
+}
+
+function renderFriendshipGate(item) {
+  if (!friendshipGate) return;
+
+  friendshipGate.hidden = false;
+  friendshipGate.innerHTML = '';
+
+  if (!item || canMessage(item)) {
+    friendshipGate.hidden = true;
+    return;
+  }
+
+  const statusValue = item.dataset.friendshipStatus;
+  const direction = item.dataset.friendshipDirection;
+  const titleText = statusValue === 'pending' && direction === 'incoming'
+    ? `${item.dataset.chat} wants to message you`
+    : statusValue === 'pending'
+      ? 'Invite sent'
+      : statusValue === 'declined'
+        ? 'Invite was declined'
+        : `Invite ${item.dataset.chat}`;
+  const bodyText = statusValue === 'pending' && direction === 'incoming'
+    ? 'Accept the invite to unlock this conversation.'
+    : statusValue === 'pending'
+      ? 'Waiting for them to accept before messages can be sent.'
+      : 'Send an invite first. Messaging stays locked until they accept.';
+
+  friendshipGate.insertAdjacentHTML('beforeend', `<strong>${titleText}</strong><span>${bodyText}</span>`);
+
+  const actions = document.createElement('div');
+  actions.className = 'friendship-actions';
+
+  if (statusValue === 'pending' && direction === 'incoming') {
+    actions.innerHTML = `
+      <button type="button" class="friend-action primary" data-friend-action="accept">Accept</button>
+      <button type="button" class="friend-action" data-friend-action="decline">Decline</button>
+    `;
+  } else if (statusValue !== 'pending') {
+    actions.innerHTML = '<button type="button" class="friend-action primary" data-friend-action="invite">Invite</button>';
+  }
+
+  friendshipGate.append(actions);
 }
 
 function avatarMarkup(name, initial, avatarUrl, size = '') {
@@ -159,12 +232,16 @@ function renderMessage(message) {
   const row = document.createElement('div');
   row.className = `message-row ${message.direction}`;
   row.dataset.messageId = message.id;
+  row.dataset.reactionUrl = `/messages/${message.id}/reaction`;
   const media = message.media_url && message.media_type === 'photo'
     ? `<a class="message-media" href="${message.media_url}" target="_blank" rel="noreferrer"><img src="${message.media_url}" alt="${message.media_original_name || 'Photo'}"></a>`
     : message.media_url
       ? `<a class="message-media video" href="${message.media_url}" target="_blank" rel="noreferrer"><video src="${message.media_url}" controls></video></a>`
       : '';
   const body = message.body ? `<div class="bubble"></div>` : '';
+  const reactions = Object.entries(message.reactions || {})
+    .map(([reaction, count]) => `<span class="${message.viewer_reaction === reaction ? 'mine' : ''}">${reaction}${count > 1 ? ` ${count}` : ''}</span>`)
+    .join('');
   const checks = message.direction === 'sent' ? ' <span class="read-mark">✓✓</span>' : '';
 
   row.innerHTML = `
@@ -172,6 +249,15 @@ function renderMessage(message) {
       <span class="sender-label">${message.sender_name}</span>
       ${media}
       ${body}
+      <div class="reaction-tray" aria-label="React to message">
+        <button type="button" data-reaction="👍">👍</button>
+        <button type="button" data-reaction="❤️">❤️</button>
+        <button type="button" data-reaction="😂">😂</button>
+        <button type="button" data-reaction="😮">😮</button>
+        <button type="button" data-reaction="😢">😢</button>
+        <button type="button" data-reaction="🙏">🙏</button>
+      </div>
+      ${reactions ? `<div class="message-reactions">${reactions}</div>` : ''}
       <time title="${message.created_at_display}">${message.created_at_display}${checks}</time>
     </div>
   `;
@@ -182,11 +268,25 @@ function renderMessage(message) {
 
 async function loadMessages(item) {
   if (!item || !conversation) return;
+  if (!canMessage(item)) {
+    clearMessages('Invite required');
+    renderFriendshipGate(item);
+    setComposerEnabled(false);
+    return;
+  }
+
   const typing = document.querySelector('#typing');
   if (typing) typing.hidden = true;
   document.querySelectorAll('.message-row').forEach((message) => message.remove());
+  renderFriendshipGate(item);
+  setComposerEnabled(true);
 
   const response = await fetch(item.dataset.messagesUrl, { headers: { Accept: 'application/json' } });
+  if (!response.ok) {
+    clearMessages('Invite required');
+    setComposerEnabled(false);
+    return;
+  }
   const data = await response.json();
   const divider = document.querySelector('.date-divider span');
   if (divider) divider.textContent = data.messages.length ? 'Conversation' : 'No messages yet';
@@ -210,7 +310,7 @@ function updateChatPreview(item, message) {
 }
 
 async function syncActiveMessages() {
-  if (!activeChat || !conversation || isSyncingMessages) return;
+  if (!activeChat || !conversation || isSyncingMessages || !canMessage(activeChat)) return;
   isSyncingMessages = true;
 
   try {
@@ -256,12 +356,12 @@ function selectChat(item) {
   setAvatar(document.querySelector('#intro-avatar'), item, 'large');
   setAvatar(document.querySelector('#details-avatar'), item, 'xl');
   loadMessages(item);
-  loadGallery(item);
+  if (canMessage(item)) loadGallery(item);
   if (window.innerWidth <= 680) setNavCollapsed(true);
 }
 
 chatItems().forEach((item) => item.addEventListener('click', () => selectChat(item)));
-if (activeChat) selectChat(activeChat);
+setComposerEnabled(false);
 
 document.querySelector('#toggle-sidebar')?.addEventListener('click', () => {
   setNavCollapsed(!document.body.classList.contains('nav-collapsed'));
@@ -292,7 +392,7 @@ fileInput?.addEventListener('change', (event) => {
 });
 
 async function sendTypingSignal() {
-  if (!activeChat || !activeChat.dataset.typingUrl) return;
+  if (!activeChat || !canMessage(activeChat) || !activeChat.dataset.typingUrl) return;
   const now = Date.now();
   if (now - lastTypingPing < 2500) return;
   lastTypingPing = now;
@@ -309,7 +409,7 @@ input?.addEventListener('input', () => {
 
 document.querySelector('#composer')?.addEventListener('submit', async (event) => {
   event.preventDefault();
-  if (!activeChat) return;
+  if (!activeChat || !canMessage(activeChat)) return;
   const message = input.value.trim();
   if (!message && !selectedMedia) return;
   const hadMedia = Boolean(selectedMedia);
@@ -345,7 +445,12 @@ document.querySelector('#search-input')?.addEventListener('input', (event) => {
 });
 
 async function loadGallery(item) {
-  if (!item || !mediaGrid) return;
+  if (!item || !mediaGrid || !canMessage(item)) {
+    if (mediaGrid) mediaGrid.innerHTML = '';
+    if (galleryCount) galleryCount.textContent = '0';
+    if (galleryEmpty) galleryEmpty.hidden = false;
+    return;
+  }
   const response = await fetch(item.dataset.galleryUrl, { headers: { Accept: 'application/json' } });
   const data = await response.json();
   mediaGrid.innerHTML = '';
@@ -395,21 +500,124 @@ async function pollUnread() {
   });
 
   if (unreadTotal > latestUnreadTotal) {
+    const latestUnread = Object.values(data.unread || {})[0];
     playNotification();
-    showToast('New message received');
+    showToast(`${latestUnread?.sender_name || 'Someone'} sent you a message`);
   }
   latestUnreadTotal = unreadTotal;
 }
 
 async function pollTypingStatus() {
   const typing = document.querySelector('#typing');
-  if (!typing || !activeChat?.dataset.typingStatusUrl) return;
+  if (!typing || !activeChat?.dataset.typingStatusUrl || !canMessage(activeChat)) return;
 
   const response = await fetch(activeChat.dataset.typingStatusUrl, { headers: { Accept: 'application/json' } });
   const data = await response.json();
   typing.hidden = !data.typing;
   if (data.typing) conversation.scrollTop = conversation.scrollHeight;
 }
+
+async function updateFriendship(action) {
+  if (!activeChat) return;
+
+  const url = {
+    invite: activeChat.dataset.inviteUrl,
+    accept: activeChat.dataset.acceptUrl,
+    decline: activeChat.dataset.declineUrl,
+  }[action];
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': csrf, Accept: 'application/json' },
+  });
+
+  if (!response.ok) {
+    showToast('Could not update invite');
+    return;
+  }
+
+  const data = await response.json();
+  setChatFriendship(activeChat, data.friendship.status, data.friendship.direction);
+  activeChat.querySelector('.unread-badge')?.remove();
+  activeChat.querySelector('.chat-copy small').textContent = data.friendship.status === 'accepted'
+    ? 'You can message now'
+    : data.friendship.status === 'pending' && data.friendship.direction === 'outgoing'
+      ? 'Invite pending'
+      : 'Send invite to start chatting';
+  renderFriendshipGate(activeChat);
+  setComposerEnabled(canMessage(activeChat));
+
+  if (canMessage(activeChat)) {
+    showToast('Conversation unlocked');
+    await loadMessages(activeChat);
+  }
+}
+
+async function pollFriendInvites() {
+  if (!document.querySelector('[data-page="chat"]')) return;
+  const response = await fetch('/friends/notifications', { headers: { Accept: 'application/json' } });
+  if (!response.ok) return;
+
+  const data = await response.json();
+  const invites = data.invites || [];
+  const inviteTotal = invites.length;
+
+  invites.forEach((invite) => {
+    const item = document.querySelector(`.chat-item[data-user-id="${invite.requester_id}"]`);
+    if (!item || item.dataset.friendshipStatus === 'accepted') return;
+
+    setChatFriendship(item, 'pending', 'incoming');
+    item.querySelector('.chat-copy small').textContent = 'Wants to message you';
+    let badge = item.querySelector('.unread-badge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.className = 'unread-badge';
+      item.querySelector('.chat-copy').after(badge);
+    }
+    badge.textContent = '!';
+    chatList?.prepend(item);
+  });
+
+  if (inviteTotal > latestInviteTotal) {
+    const latestInvite = invites[0];
+    playNotification();
+    showToast(`${latestInvite?.requester_name || 'Someone'} wants to be friends with you`);
+  }
+
+  latestInviteTotal = inviteTotal;
+}
+
+friendshipGate?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-friend-action]');
+  if (!button) return;
+  updateFriendship(button.dataset.friendAction);
+});
+
+conversation?.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-reaction]');
+  if (!button) return;
+
+  const row = button.closest('.message-row');
+  const reaction = button.dataset.reaction;
+  const currentReaction = row.querySelector('.message-reactions .mine')?.textContent?.trim()?.split(' ')[0];
+  const response = await fetch(row.dataset.reactionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': csrf,
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ reaction: currentReaction === reaction ? null : reaction }),
+  });
+
+  if (!response.ok) {
+    showToast('Could not react');
+    return;
+  }
+
+  const data = await response.json();
+  row.replaceWith(renderMessage(data.message));
+});
 
 document.addEventListener('keydown', (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -433,5 +641,6 @@ applyTheme(localStorage.getItem('pm-theme') || 'light');
 document.querySelector('#notification-toggle')?.addEventListener('click', (event) => event.currentTarget.classList.toggle('active'));
 document.querySelector('#close-settings')?.addEventListener('click', () => { settingsPanel.hidden = true; });
 setInterval(pollUnread, 5000);
+setInterval(pollFriendInvites, 5000);
 setInterval(syncActiveMessages, 2500);
 setInterval(pollTypingStatus, 2500);

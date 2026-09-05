@@ -534,6 +534,39 @@ body.nav-collapsed .logout-form .text-button::before {
 
 .date-divider:before, .date-divider:after { content: ""; height: 1px; flex: 1; background: var(--line); }
 
+.friendship-gate {
+  display: grid;
+  gap: 10px;
+  max-width: 360px;
+  margin: 16px auto 28px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  text-align: center;
+  box-shadow: 0 10px 30px #17203310;
+}
+
+.friendship-gate[hidden] { display: none; }
+.friendship-gate strong { font: 700 15px "Space Grotesk", sans-serif; }
+.friendship-gate span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.friendship-actions { display: flex; justify-content: center; gap: 8px; }
+
+.friend-action {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.friend-action.primary {
+  color: #fff;
+  background: var(--blue);
+}
+
 .message-row {
   display: flex;
   align-items: flex-end;
@@ -593,6 +626,65 @@ body.nav-collapsed .logout-form .text-button::before {
   background: #000;
 }
 
+.reaction-tray {
+  display: flex;
+  width: max-content;
+  gap: 2px;
+  margin: 6px 0 0;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 8px 24px #17203314;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity .2s var(--ease), transform .2s var(--ease);
+}
+
+.sent .reaction-tray { margin-left: auto; }
+.message-row:hover .reaction-tray,
+.message-row:focus-within .reaction-tray { opacity: 1; transform: none; }
+
+.reaction-tray button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 15px;
+  transition: transform .16s var(--ease), background-color .16s var(--ease);
+}
+
+.reaction-tray button:hover {
+  transform: translateY(-2px) scale(1.08);
+  background: var(--panel-soft);
+}
+
+.message-reactions {
+  display: flex;
+  width: max-content;
+  gap: 3px;
+  margin: 5px 0 0 2px;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 6px 18px #17203310;
+}
+
+.sent .message-reactions { margin-left: auto; }
+
+.message-reactions span {
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.message-reactions .mine {
+  font-weight: 800;
+}
+
 .typing {
   display: flex;
   align-items: center;
@@ -634,6 +726,16 @@ body.nav-collapsed .logout-form .text-button::before {
   color: var(--ink);
   background: transparent;
   font-size: 12px;
+}
+
+.composer input:disabled {
+  color: var(--muted);
+}
+
+.send-button:disabled,
+.composer input:disabled ~ .send-button {
+  opacity: .45;
+  cursor: not-allowed;
 }
 
 .composer input::placeholder { color: #adb5c2; }

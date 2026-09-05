@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Message;
+use App\Models\MessageReaction;
 use App\Models\User;
+use App\Models\Friendship;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,8 +16,9 @@ class MessageController extends Controller
     public function index(Request $request, User $user): JsonResponse
     {
         $authUser = $request->user();
+        $this->ensureCanMessage($authUser, $user);
 
-        $messages = Message::with('sender')
+        $messages = Message::with(['sender', 'reactions'])
             ->where(function ($query) use ($authUser, $user) {
                 $query->where('sender_id', $authUser->id)->where('receiver_id', $user->id);
             })
@@ -37,6 +40,8 @@ class MessageController extends Controller
 
     public function store(Request $request, User $user): JsonResponse
     {
+        $this->ensureCanMessage($request->user(), $user);
+
         $data = $request->validate([
             'body' => ['nullable', 'string', 'max:5000'],
             'media' => ['nullable', 'file', 'mimetypes:image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime', 'max:51200'],
@@ -64,7 +69,7 @@ class MessageController extends Controller
             'media_original_name' => $media?->getClientOriginalName(),
             'media_mime' => $media?->getMimeType(),
             'media_size' => $media?->getSize(),
-        ])->load('sender');
+        ])->load(['sender', 'reactions']);
 
         return response()->json([
             'message' => $this->messagePayload($message, $request->user()->id),
@@ -74,8 +79,9 @@ class MessageController extends Controller
     public function gallery(Request $request, User $user): JsonResponse
     {
         $authUser = $request->user();
+        $this->ensureCanMessage($authUser, $user);
 
-        $items = Message::with('sender')
+        $items = Message::with(['sender', 'reactions'])
             ->whereNotNull('media_path')
             ->where(function ($query) use ($authUser, $user) {
                 $query->where(function ($inner) use ($authUser, $user) {
@@ -104,11 +110,19 @@ class MessageController extends Controller
             ->get()
             ->keyBy('sender_id');
 
+        $senders = User::whereIn('id', $unread->keys())->pluck('name', 'id');
+
+        $unread->each(function ($item) use ($senders) {
+            $item->sender_name = $senders[$item->sender_id] ?? 'Someone';
+        });
+
         return response()->json(['unread' => $unread]);
     }
 
     public function typing(Request $request, User $user): JsonResponse
     {
+        $this->ensureCanMessage($request->user(), $user);
+
         Cache::put($this->typingCacheKey($request->user()->id, $user->id), true, now()->addSeconds(6));
 
         return response()->json(['typing' => true]);
@@ -116,8 +130,38 @@ class MessageController extends Controller
 
     public function typingStatus(Request $request, User $user): JsonResponse
     {
+        $this->ensureCanMessage($request->user(), $user);
+
         return response()->json([
             'typing' => Cache::has($this->typingCacheKey($user->id, $request->user()->id)),
+        ]);
+    }
+
+    public function react(Request $request, Message $message): JsonResponse
+    {
+        $data = $request->validate([
+            'reaction' => ['nullable', 'string', 'in:👍,❤️,😂,😮,😢,🙏'],
+        ]);
+
+        $authUser = $request->user();
+        $otherUserId = $message->sender_id === $authUser->id ? $message->receiver_id : $message->sender_id;
+
+        abort_unless($message->sender_id === $authUser->id || $message->receiver_id === $authUser->id, 403);
+        $this->ensureCanMessage($authUser, User::findOrFail($otherUserId));
+
+        if (empty($data['reaction'])) {
+            MessageReaction::where('message_id', $message->id)
+                ->where('user_id', $authUser->id)
+                ->delete();
+        } else {
+            MessageReaction::updateOrCreate(
+                ['message_id' => $message->id, 'user_id' => $authUser->id],
+                ['reaction' => $data['reaction']]
+            );
+        }
+
+        return response()->json([
+            'message' => $this->messagePayload($message->fresh(['sender', 'reactions']), $authUser->id),
         ]);
     }
 
@@ -136,7 +180,25 @@ class MessageController extends Controller
             'created_at' => $message->created_at->toIso8601String(),
             'created_at_display' => $message->created_at->format('M j, Y g:i A'),
             'read' => (bool) $message->read_at,
+            'reactions' => $message->reactions
+                ->groupBy('reaction')
+                ->map(fn ($items) => $items->count())
+                ->all(),
+            'viewer_reaction' => $message->reactions->firstWhere('user_id', $viewerId)?->reaction,
         ];
+    }
+
+    private function ensureCanMessage(User $authUser, User $user): void
+    {
+        abort_unless(Friendship::where('status', Friendship::STATUS_ACCEPTED)
+            ->where(function ($query) use ($authUser, $user) {
+                $query->where(function ($inner) use ($authUser, $user) {
+                    $inner->where('requester_id', $authUser->id)->where('addressee_id', $user->id);
+                })->orWhere(function ($inner) use ($authUser, $user) {
+                    $inner->where('requester_id', $user->id)->where('addressee_id', $authUser->id);
+                });
+            })
+            ->exists(), 403);
     }
 
     private function typingCacheKey(int $senderId, int $receiverId): string
