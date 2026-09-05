@@ -24,6 +24,7 @@ let selectedMedia = null;
 let latestUnreadTotal = 0;
 let notificationReady = false;
 let lastTypingPing = 0;
+let isSyncingMessages = false;
 let tooltipTimer = null;
 let activeTooltipTarget = null;
 
@@ -147,6 +148,7 @@ document.addEventListener('scroll', hideTooltip, true);
 function renderMessage(message) {
   const row = document.createElement('div');
   row.className = `message-row ${message.direction}`;
+  row.dataset.messageId = message.id;
   const media = message.media_url && message.media_type === 'photo'
     ? `<a class="message-media" href="${message.media_url}" target="_blank" rel="noreferrer"><img src="${message.media_url}" alt="${message.media_original_name || 'Photo'}"></a>`
     : message.media_url
@@ -182,6 +184,53 @@ async function loadMessages(item) {
   data.messages.forEach((message) => typing?.before(renderMessage(message)));
   item.querySelector('.unread-badge')?.remove();
   conversation.scrollTop = conversation.scrollHeight;
+}
+
+function updateChatPreview(item, message) {
+  if (!item || !message) return;
+
+  const preview = item.querySelector('.chat-copy small');
+  const timestamp = item.querySelector('time');
+  const previewText = message.body || (['photo', 'video'].includes(message.media_type) ? `Sent a ${message.media_type}` : 'Sent media');
+
+  if (preview) preview.textContent = previewText;
+  if (timestamp) {
+    timestamp.textContent = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date(message.created_at));
+  }
+}
+
+async function syncActiveMessages() {
+  if (!activeChat || !conversation || isSyncingMessages) return;
+  isSyncingMessages = true;
+
+  try {
+    const response = await fetch(activeChat.dataset.messagesUrl, { headers: { Accept: 'application/json' } });
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const messages = data.messages || [];
+    const existingIds = new Set([...document.querySelectorAll('.message-row')].map((row) => row.dataset.messageId));
+    const newMessages = messages.filter((message) => !existingIds.has(String(message.id)));
+    const typing = document.querySelector('#typing');
+    const wasNearBottom = conversation.scrollHeight - conversation.scrollTop - conversation.clientHeight < 120;
+    const divider = document.querySelector('.date-divider span');
+
+    if (divider) divider.textContent = messages.length ? 'Conversation' : 'No messages yet';
+    newMessages.forEach((message) => typing?.before(renderMessage(message)));
+    activeChat.querySelector('.unread-badge')?.remove();
+
+    if (newMessages.length) {
+      const latestMessage = newMessages[newMessages.length - 1];
+      updateChatPreview(activeChat, latestMessage);
+      chatList?.prepend(activeChat);
+      if (latestMessage.media_url) loadGallery(activeChat);
+      if (wasNearBottom || latestMessage.direction === 'sent') {
+        conversation.scrollTop = conversation.scrollHeight;
+      }
+    }
+  } finally {
+    isSyncingMessages = false;
+  }
 }
 
 function selectChat(item) {
@@ -248,6 +297,7 @@ document.querySelector('#composer')?.addEventListener('submit', async (event) =>
   if (!activeChat) return;
   const message = input.value.trim();
   if (!message && !selectedMedia) return;
+  const hadMedia = Boolean(selectedMedia);
 
   const formData = new FormData();
   if (message) formData.append('body', message);
@@ -270,8 +320,7 @@ document.querySelector('#composer')?.addEventListener('submit', async (event) =>
   selectedFile.hidden = true;
   await loadMessages(activeChat);
   await loadGallery(activeChat);
-  activeChat.querySelector('.chat-copy small').textContent = message || 'Sent media';
-  activeChat.querySelector('time').textContent = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date());
+  updateChatPreview(activeChat, { body: message, media_type: hadMedia ? 'media' : null, created_at: new Date().toISOString() });
   chatList?.prepend(activeChat);
 });
 
@@ -369,4 +418,5 @@ applyTheme(localStorage.getItem('pm-theme') || 'light');
 document.querySelector('#notification-toggle')?.addEventListener('click', (event) => event.currentTarget.classList.toggle('active'));
 document.querySelector('#close-settings')?.addEventListener('click', () => { settingsPanel.hidden = true; });
 setInterval(pollUnread, 5000);
+setInterval(syncActiveMessages, 2500);
 setInterval(pollTypingStatus, 2500);
