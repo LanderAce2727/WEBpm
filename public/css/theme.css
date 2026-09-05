@@ -311,7 +311,7 @@ body.dark-white {
 
   .details-panel {
     position: fixed;
-    z-index: 4;
+    z-index: 14;
     inset: 0 0 0 auto;
     width: min(330px, 92vw);
     overflow: auto;

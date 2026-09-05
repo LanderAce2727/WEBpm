@@ -110,6 +110,7 @@
             <button class="icon-button" id="call-button" aria-label="Start voice call">C</button>
             <button class="icon-button" id="video-button" aria-label="Start video call">V</button>
             <button class="icon-button" id="gallery-button" aria-label="Open shared gallery">G</button>
+            <button class="icon-button" id="details-button" type="button" aria-label="Open user details" aria-expanded="false" aria-controls="details-panel">i</button>
           </div>
         </header>
 
@@ -132,7 +133,7 @@
         </form>
       </main>
 
-      <aside class="details-panel" id="details-panel" aria-label="Conversation details">
+      <aside class="details-panel collapsed" id="details-panel" aria-label="Conversation details" aria-hidden="true">
         <div class="details-head"><h2>User details</h2><button class="icon-button" id="close-details" aria-label="Close details">x</button></div>
         <div class="details-profile"><span class="avatar-initials xl" id="details-avatar" aria-hidden="true">{{ $contacts->first() ? strtoupper(substr($contacts->first()->name, 0, 1)) : 'PM' }}</span><h3 id="details-name">{{ $contacts->first()->name ?? 'No user selected' }}</h3><span id="details-members">{{ $contacts->first() ? 'Registered user' : 'Waiting for registrations' }}</span></div>
         <div class="details-section">

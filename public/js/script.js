@@ -13,6 +13,7 @@ const toast = document.querySelector('#toast');
 const sidebar = document.querySelector('.sidebar');
 const settingsPanel = document.querySelector('#settings-panel');
 const fileInput = document.querySelector('#file-input');
+const detailsButton = document.querySelector('#details-button');
 const selectedFile = document.querySelector('#selected-file');
 const mediaGrid = document.querySelector('#media-grid');
 const galleryEmpty = document.querySelector('#gallery-empty');
@@ -42,6 +43,15 @@ function showToast(message) {
   toast.classList.add('show');
   window.clearTimeout(showToast.timer);
   showToast.timer = window.setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+function setDetailsOpen(open) {
+  if (!detailsPanel) return;
+
+  detailsPanel.classList.toggle('collapsed', !open);
+  detailsPanel.setAttribute('aria-hidden', open ? 'false' : 'true');
+  detailsButton?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  document.body.classList.toggle('details-open', open);
 }
 
 function avatarMarkup(name, initial, avatarUrl, size = '') {
@@ -259,10 +269,15 @@ document.querySelector('#toggle-sidebar')?.addEventListener('click', () => {
 document.querySelector('#open-sidebar')?.addEventListener('click', () => setNavCollapsed(false));
 document.querySelector('#close-sidebar')?.addEventListener('click', () => setNavCollapsed(true));
 document.querySelector('#gallery-button')?.addEventListener('click', () => {
-  detailsPanel.style.display = 'block';
+  setDetailsOpen(true);
   if (activeChat) loadGallery(activeChat);
 });
-document.querySelector('#close-details')?.addEventListener('click', () => detailsPanel.style.display = 'none');
+detailsButton?.addEventListener('click', () => {
+  const isOpen = document.body.classList.contains('details-open');
+  setDetailsOpen(!isOpen);
+  if (!isOpen && activeChat) loadGallery(activeChat);
+});
+document.querySelector('#close-details')?.addEventListener('click', () => setDetailsOpen(false));
 document.querySelector('#call-button')?.addEventListener('click', () => showToast('Voice call preview started'));
 document.querySelector('#video-button')?.addEventListener('click', () => showToast('Video call preview started'));
 document.querySelector('#attach-button')?.addEventListener('click', () => fileInput?.click());
